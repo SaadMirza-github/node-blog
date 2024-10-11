@@ -3,7 +3,7 @@ const Blog = require('../models/blog');
 exports.createBlog = async (req, res) => {
   try {
     const { title, content, tags, categories } = req.body;
-    const author = req.user._id;  // Assuming the author is the logged-in user
+    const author = req.user.userId;  // Assuming the author is the logged-in user
 
     const newBlog = new Blog({
       title,
