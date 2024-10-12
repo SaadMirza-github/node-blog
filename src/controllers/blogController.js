@@ -1,9 +1,13 @@
 const Blog = require('../models/blog');
+const fs = require('fs'); // Import fs module to work with the filesystem
+const path = require('path'); // Import path module to handle file paths
+
 // Create a new blog post
 exports.createBlog = async (req, res) => {
   try {
     const { title, content, tags, categories } = req.body;
     const author = req.user.userId;  // Assuming the author is the logged-in user
+    const image = req.file ? `/uploads/${req.file.filename}` : null;  // Handle uploaded image
 
     const newBlog = new Blog({
       title,
@@ -11,8 +15,9 @@ exports.createBlog = async (req, res) => {
       author,
       tags,
       categories,
+      image,
     });
-
+    
     const savedBlog = await newBlog.save();
     res.status(201).json({ message: 'Blog post created successfully', blog: savedBlog });
   } catch (error) {
@@ -47,12 +52,23 @@ exports.getBlogById = async (req, res) => {
 exports.updateBlogById = async (req, res) => {
   try {
     const { title, content, tags, categories } = req.body;
+    const image = req.file ? `/uploads/${req.file.filename}` : null;  // Handle uploaded image
 
-    const updatedBlog = await Blog.findByIdAndUpdate(
-      req.params.id,
-      { title, content, tags, categories, updatedAt: Date.now() },
-      { new: true }
-    );
+    const updateData = {
+      title,
+      content,
+      tags,
+      categories,
+      updatedAt: Date.now(),
+    };
+
+    // Only update image if a new one is uploaded
+    if (image) {
+      updateData.image = image;
+    }
+
+    const updatedBlog = await Blog.findByIdAndUpdate(req.params.id, updateData, { new: true });
+    
 
     if (!updatedBlog) {
       return res.status(404).json({ message: 'Blog post not found' });
@@ -71,6 +87,18 @@ exports.deleteBlogById = async (req, res) => {
     if (!blog) {
       return res.status(404).json({ message: 'Blog post not found' });
     }
+
+    // Construct the path to the image
+    const imagePath = path.join(__dirname ,  blog.image); // Adjust the path as necessary
+    let modifiedPath = imagePath.replace('\\src\\controllers', '');
+    // Delete the image file if it exists
+    fs.unlink(modifiedPath, (err) => {
+      if (err) {
+        console.error('Error deleting image:', err);
+        // If there was an error deleting the image, you may still want to delete the blog
+        // You can choose to handle this differently based on your requirements
+      }
+    });
 
     res.status(200).json({ message: 'Blog post deleted successfully' });
   } catch (error) {
