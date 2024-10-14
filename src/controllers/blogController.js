@@ -27,12 +27,26 @@ exports.createBlog = async (req, res) => {
 
 // Get all blog posts
 exports.getAllBlogs = async (req, res) => {
+
+  const page = parseInt(req.query.page) || 1;
+  const limit = parseInt(req.query.limit) || 3;
+  const skip = (page - 1) * limit;
+
   try {
-    const blogs = await Blog.find().populate('author', 'name email');  // Populate author details
-    res.status(200).json(blogs);
+    const blogs = await Blog.find().skip(skip).limit(limit).populate('author', 'name email');  // Populate author details
+    // Count the total number of blogs
+    const totalBlogs = await Blog.countDocuments();
+
+    // Determine if there are more blogs to load
+    const hasMore = (page * limit) < totalBlogs;
+
+    // Send blogs and hasMore flag to client
+    res.json({ blogs, hasMore });
   } catch (error) {
     res.status(500).json({ message: 'Error fetching blog posts', error });
   }
+
+ 
 };
 
 // Get a single blog post by ID
